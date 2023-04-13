@@ -39,10 +39,9 @@ static int match(struct str_token *cmd, struct str_token *alw, bool is_hardcoded
                 /* it's useless if length differ */
                 if (alw->len != cmd->len)
                         return false;
-                /* make sure it is not a substring. */
-                if (!my_isspace(cmd->param[cmd->len]) && cmd->param[cmd->len] != '\0')
-                        return false;
         }
+        if (cmd->len < alw->len)
+                return false;
         return strncmp16(cmd->param, alw->param, alw->len) == 0;
 }
 

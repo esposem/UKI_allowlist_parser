@@ -5,6 +5,8 @@
 #define ASCII_LAST 127
 #define NEXT_PARAM_ITERATIONS 100000
 
+#define ARRAY_SIZE(x)  (sizeof(x) / sizeof((x)[0]))
+
 /** create_full_string
  * Allocates and populates a string @budget chars long, starting with separator (at least
  * a space) if @start_sep == true and with a parameter otherwise.
@@ -111,20 +113,77 @@ static void test_next_param(void) {
 		_test_next_param(rand() % MAX_STR_LEN+1, RANDOM, solution);
 	}
 	free(solution);
-	printf("Test next_param PASSED\n");
+	printf("Test next_param() PASSED\n");
 }
 
 /* any combination cmdline/allowlist using these is valid */
-static const char *fixed_args_correct[] = {
+static const char *fix_correct[] = {
 	"asd", " asd", "asd ", " asd ",
 };
+
+static void test_fix_correct(void) {
+	int i,j;
+
+	for (i=0; i < ARRAY_SIZE(fix_correct); i++) {
+		for (j=0; j < ARRAY_SIZE(fix_correct); j++) {
+			assert(check_cmdline(fix_correct[i], fix_correct[j]));
+		}
+	}
+}
+
 /* a combination cmdline/allowlist using these is valid only if the index is the same */
-static const char *fixed_args_incorrect[] = {
+static const char *fix_incorrect[] = {
 	"aaaa", " aa", "aaa ", " a ",
 };
 
-//TODO: look at the allowlist args, and test all of them with command_line_args
-//TODO: figure how to know the solution
+static void test_fixed_args(void)
+{
+	int i,j;
+
+	for (i=0; i < ARRAY_SIZE(fix_incorrect); i++) {
+		for (j=0; j < ARRAY_SIZE(fix_incorrect); j++) {
+			if (i != j)
+				assert(!check_cmdline(fix_incorrect[i], fix_incorrect[j]));
+			else
+				assert(check_cmdline(fix_incorrect[i], fix_incorrect[j]));
+		}
+	}
+}
+
+static bool simple_allowlist_checker(const char *allowlist_param, const char *cmdline_param) {
+	size_t alen = strlen(allowlist_param);
+	size_t clen = strlen(cmdline_param);
+	if (allowlist_param[alen-1] != '=' && clen != alen)
+		return false;
+	if (clen < alen)
+		return false;
+	return memcmp(allowlist_param, cmdline_param, alen) == 0;
+}
+
+static void _test_check_cmdline(const char *allowlist_param, const char *cmdline_param) {
+	bool sol = simple_allowlist_checker(allowlist_param, cmdline_param);
+	bool res = check_cmdline(cmdline_param, allowlist_param);
+
+	assert(sol == res);
+}
+
+static const char *allowlist_args[] = {
+	"arg", "xxxarg", "argxxx", "asdasd",
+	"arg=", "xxxarg=", "argxxx=", "asdasd=",
+	"arg=123", "arg=1234", "arg=4", "arg=1",
+};
+
+static void test_allowlist_args(void)
+{
+	int i,j;
+
+	for (i=0; i < ARRAY_SIZE(allowlist_args); i++) {
+		for (j=0; j < ARRAY_SIZE(allowlist_args); j++) {
+			_test_check_cmdline(allowlist_args[i], allowlist_args[j]);
+		}
+	}
+}
+
 static const char *command_line_args[] = {
 	"arg", "arg=", " arg==", "arg=sthing", "arg==sthing",
 	"arg=arg=arg", "arg=arg=arg=", "arg=arg=arg==", "arg=arg==arg", "arg=arg==arg=",
@@ -134,34 +193,29 @@ static const char *command_line_args[] = {
 	"=", "==", "=123", "1", "=arg", "=arg=", "==arg", "==arg=="
 };
 
-static const char *allowlist_args[] = {
-	"arg", "xxxarg", "argxxx", "asdasd",
-	"arg=", "xxxarg=", "argxxx=", "asdasd=",
-	"arg=123", "arg=1234", "arg=4", "arg=1",
-};
-
-static void test_check_cmdline(void) {
+static void test_cmdline_args(void)
+{
 	int i,j;
 
-	for (i=0; i < 4; i++) {
-		for (j=0; j < 4; j++) {
-			assert(check_cmdline(fixed_args_correct[i], fixed_args_correct[j]));
+	for (i=0; i < ARRAY_SIZE(command_line_args); i++) {
+		for (j=0; j < ARRAY_SIZE(allowlist_args); j++) {
+			_test_check_cmdline(command_line_args[i], allowlist_args[j]);
 		}
 	}
+}
 
-	for (i=0; i < 4; i++) {
-		for (j=0; j < 4; j++) {
-			if (i != j)
-				assert(!check_cmdline(fixed_args_incorrect[i], fixed_args_incorrect[j]));
-			else
-				assert(check_cmdline(fixed_args_incorrect[i], fixed_args_incorrect[j]));
-		}
-	}
+static void test_check_cmdline(void) {
 
+	test_fix_correct();
+	test_fixed_args();
+	test_allowlist_args();
+	test_cmdline_args();
+	printf("Test check_cmdline() PASSED\n");
 }
 
 int main(int argc, char const *argv[]) {
 	srand(time(NULL));
 	test_next_param();
+	test_check_cmdline();
 	return 0;
 }
