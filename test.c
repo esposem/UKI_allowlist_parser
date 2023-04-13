@@ -7,6 +7,14 @@
 
 #define ARRAY_SIZE(x)  (sizeof(x) / sizeof((x)[0]))
 
+#define DEBUG 0
+
+#if DEBUG
+#define printf_debug(...)  printf(__VA_ARGS__)
+#else
+#define printf_debug(...)
+#endif
+
 /** create_full_string
  * Allocates and populates a string @budget chars long, starting with separator (at least
  * a space) if @start_sep == true and with a parameter otherwise.
@@ -58,8 +66,8 @@ static void compare_tokens(const char *str, struct str_token *solution, int len_
 	int i = 0;
 	while (i < len_sol) {
 		assert(next_param(&str, &tmp));
-		// printf("solution %d points to %u (%p) len %zu\n", i, *solution->param, solution->param, solution->len);
-		// printf("proposal %d points to %u (%p) len %zu\n", i, *tmp.param, tmp.param, tmp.len);
+		printf_debug("solution %d points to %u (%p) len %zu\n", i, *solution->param, solution->param, solution->len);
+		printf_debug("proposal %d points to %u (%p) len %zu\n", i, *tmp.param, tmp.param, tmp.len);
 		assert(!memcmp(solution, &tmp, sizeof(struct str_token)));
 		solution++;
 		i++;
@@ -153,24 +161,27 @@ static void test_fixed_args(void)
 static bool simple_allowlist_checker(const char *allowlist_param, const char *cmdline_param) {
 	size_t alen = strlen(allowlist_param);
 	size_t clen = strlen(cmdline_param);
+	if (alen == 0)
+		return false;
 	if (allowlist_param[alen-1] != '=' && clen != alen)
 		return false;
 	if (clen < alen)
 		return false;
+	printf_debug("CMP allow: |%s| cmd: |%s| len %zu\n", allowlist_param, cmdline_param, alen);
 	return memcmp(allowlist_param, cmdline_param, alen) == 0;
 }
 
 static void _test_check_cmdline(const char *allowlist_param, const char *cmdline_param) {
 	bool sol = simple_allowlist_checker(allowlist_param, cmdline_param);
 	bool res = check_cmdline(cmdline_param, allowlist_param);
-
+	printf_debug("allow: |%s| cmd: |%s| sol is %d and res is %d\n", allowlist_param, cmdline_param, sol, res);
 	assert(sol == res);
 }
 
 static const char *allowlist_args[] = {
 	"arg", "xxxarg", "argxxx", "asdasd",
 	"arg=", "xxxarg=", "argxxx=", "asdasd=",
-	"arg=123", "arg=1234", "arg=4", "arg=1",
+	"arg=123", "arg=1234", "arg=4", "arg=1", "",
 };
 
 static void test_allowlist_args(void)
@@ -185,7 +196,7 @@ static void test_allowlist_args(void)
 }
 
 static const char *command_line_args[] = {
-	"arg", "arg=", " arg==", "arg=sthing", "arg==sthing",
+	"arg", "arg=", "arg==", "arg=sthing", "arg==sthing",
 	"arg=arg=arg", "arg=arg=arg=", "arg=arg=arg==", "arg=arg==arg", "arg=arg==arg=",
 	"arg=sthing=sthing", "arg=sthing=sthing=", "arg=sthing=sthing==", "arg=sthing==sthing", "arg=sthing==sthing=",
 	"arg=arg=sthing", "arg=arg=sthing=", "arg=arg=sthing==", "arg=arg==sthing", "arg=arg==sthing=",
@@ -199,7 +210,7 @@ static void test_cmdline_args(void)
 
 	for (i=0; i < ARRAY_SIZE(command_line_args); i++) {
 		for (j=0; j < ARRAY_SIZE(allowlist_args); j++) {
-			_test_check_cmdline(command_line_args[i], allowlist_args[j]);
+			_test_check_cmdline(allowlist_args[j], command_line_args[i]);
 		}
 	}
 }

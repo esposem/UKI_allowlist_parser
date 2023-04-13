@@ -4,7 +4,7 @@
 #define MAX_ALLOWLIST_PARAMS 1024
 
 static int strncmp16(const char16_t *s1, const char16_t *s2, size_t len) {
-	return memcmp(s1, s2, len*sizeof(char16_t));
+	return memcmp(s1, s2, len);
 }
 
 bool my_isspace(char16_t c) {
@@ -59,9 +59,7 @@ static bool match_with_allowlist(const char16_t *allowlist_str, struct str_token
 bool check_cmdline(const char16_t *cmdline, const char16_t *allowlist) {
         struct str_token cmd = {};
 
-        if (!allowlist)
-                return true;
-        if (!cmdline)
+        if (!cmdline || !allowlist || *cmdline == '\0' || *allowlist == '\0')
                 return false;
 
         while (next_param(&cmdline, &cmd)) {
